@@ -6,7 +6,6 @@ const prisma = new PrismaClient();
 export const ProductController = {
   // lista todos (GET)
   index: async (req: Request, res: Response) => {
-    // Busca no banco e ordena pelos mais novos
     const products = await prisma.product.findMany({
       orderBy: { createdAt: 'desc' } 
     });
@@ -17,13 +16,11 @@ export const ProductController = {
   create: async (req: Request, res: Response) => {
     const { name, price, description, image } = req.body;
 
-    // validação 
     if (!name || !price) {
       return res.status(400).json({ error: 'Nome e preço são obrigatórios!' });
     }
 
     try {
-      // salva no bd
       const product = await prisma.product.create({
         data: {
           name,
@@ -38,7 +35,26 @@ export const ProductController = {
     }
   },
 
-  // atualizar (PUT),  para o requisito "Editar"
+  // --- AQUI ESTÁ A PEÇA QUE FALTAVA ---
+  // buscar um único produto pelo ID (GET /products/:id)
+  show: async (req: Request, res: Response) => {
+    const { id } = req.params;
+
+    try {
+      const product = await prisma.product.findUnique({
+        where: { id }
+      });
+
+      if (!product) return res.status(404).json({ error: 'Produto não encontrado' });
+
+      return res.json(product);
+    } catch (error) {
+      return res.status(500).json({ error: 'Erro ao buscar produto' });
+    }
+  },
+  // ------------------------------------
+
+  // atualizar (PUT)
   update: async (req: Request, res: Response) => {
     const { id } = req.params;
     const { name, price, description, image } = req.body;
@@ -67,7 +83,7 @@ export const ProductController = {
       await prisma.product.delete({
         where: { id }
       });
-      return res.status(204).send(); // Sucesso sem conteúdo
+      return res.status(204).send();
     } catch (error) {
       return res.status(404).json({ error: 'Produto não encontrado' });
     }
